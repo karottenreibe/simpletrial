@@ -24,48 +24,157 @@ import android.content.pm.PackageManager;
 
 import java.util.Date;
 
+/**
+ * Simple implementation of a trial period. The trial starts when the user installs the
+ * application (not when they first open the app).
+ * <p>
+ * Uses both the first install date provided by the package manager as well as an entry in a
+ * shared preference file. You should make sure that shared preference file is backed up to
+ * ensure the user cannot circumvent the trial restrictions by reinstalling the app!
+ * <p>
+ * To back up the shared preference, use the
+ * {@link android.app.backup.SharedPreferencesBackupHelper} class or enable auto backup for your
+ * app.
+ */
 public class SimpleTrial {
 
-    public static final String DEFAULT_SHARED_PREFERENCES_FILE = "trial_repo";
+    /**
+     * The default shared preference file to cache the trial start timestamp in.
+     */
+    public static final String DEFAULT_SHARED_PREFERENCES_FILE = "simple_trial";
+
+    /**
+     * The default name of the shared preference under which the trial start timestamp will be
+     * cached.
+     */
     public static final String DEFAULT_PREFERENCE_NAME = "trial_start";
 
+    /**
+     * Timestamp to return when the trial start timestamp cannot be determined.
+     */
     private static final long NOT_AVAILABLE_TIMESTAMP = -1;
 
+    /**
+     * The context.
+     */
     private final Context context;
+
+    /**
+     * The shared preferences file to cache the start timestamp in.
+     */
     private final String sharedPreferencesFile;
+
+    /**
+     * The name of the preference under which to cache the start timestamp.
+     */
     private final String preferenceName;
+
+    /**
+     * The duration of the trial in milliseconds.
+     */
     private final long trialDurationInMilliseconds;
 
+    /**
+     * In-memory cache of the trial start timestamp.
+     */
     private long trialStartTimestamp;
 
+    /**
+     * Creates a new simple trial, calculates the trial start timestamp, immediately stores it
+     * in the given shared preference.
+     * <p>
+     * If you are using the key-value backup mechanism, you should call
+     * {@link #initiateKeyValueBackup()} immediately afterwards to trigger a backup of the shared
+     * preference file.
+     * <p>
+     * If you are using auto backup, no further action is required.
+     * <p>
+     * If you'd like to add additional checks, you can use {@link #getTrialStartDate()} and
+     * {@link #updateTrialStartDate(Date)}.
+     *
+     * @param context               the context (application context is enough).
+     * @param sharedPreferencesFile the shared preference file in which to cache the trial
+     *                              timestamp.
+     * @param preferenceName        the name of the preference under which to cache the start
+     *                              timestamp.
+     * @param trialDurationInDays   the duration of the trial in days.
+     */
     public SimpleTrial(Context context, String sharedPreferencesFile, String preferenceName,
             long trialDurationInDays) {
         this.context = context;
         this.sharedPreferencesFile = sharedPreferencesFile;
         this.preferenceName = preferenceName;
         this.trialDurationInMilliseconds = trialDurationInDays * 24L * 3600 * 1000;
-        trialStartTimestamp = getTrialStartTimestamp();
+        trialStartTimestamp = calculateTrialStartTimestamp();
         persistTrialStartTimestamp();
-        BackupManager backupManager = new BackupManager(context);
-        backupManager.dataChanged();
     }
 
+    /**
+     * Creates a new simple trial using the {@link #DEFAULT_SHARED_PREFERENCES_FILE} and
+     * {@link #DEFAULT_PREFERENCE_NAME}, calculates the trial start timestamp, immediately
+     * stores it in the given shared preference.
+     * <p>
+     * If you are using the key-value backup mechanism, you should call
+     * {@link #initiateKeyValueBackup()} immediately afterwards to trigger a backup of the shared
+     * preference file.
+     * <p>
+     * If you are using auto backup, no further action is required.
+     *
+     * @param context             the context (application context is enough).
+     * @param trialDurationInDays the duration of the trial in days.
+     */
     public SimpleTrial(Context context, long trialDurationInDays) {
         this(context, DEFAULT_SHARED_PREFERENCES_FILE, DEFAULT_PREFERENCE_NAME,
                 trialDurationInDays);
     }
 
+    /**
+     * Calls {@link BackupManager#dataChanged()}. Should be invoked right after creating this
+     * object if you use key-value backup.
+     */
+    public void initiateKeyValueBackup() {
+        new BackupManager(context).dataChanged();
+    }
+
+    /**
+     * Returns true if the trial period has ended.
+     */
     public boolean isTrialPeriodFinished() {
         return new Date().getTime() >= trialStartTimestamp + trialDurationInMilliseconds;
     }
 
+    /**
+     * Returns the start date of the trial.
+     */
+    public Date getTrialStartDate() {
+        return new Date(trialStartTimestamp);
+    }
+
+    /**
+     * Stores the trial start timestamp in the shared preference.
+     */
     private void persistTrialStartTimestamp() {
         SharedPreferences preferences = context
                 .getSharedPreferences(sharedPreferencesFile, Context.MODE_PRIVATE);
         preferences.edit().putLong(preferenceName, trialStartTimestamp).apply();
     }
 
-    private long getTrialStartTimestamp() {
+    /**
+     * Allows you to manually override the trial start date. The date will be persisted to the
+     * shared preferences.
+     */
+    public void updateTrialStartDate(Date trialStartDate) {
+        trialStartTimestamp = trialStartDate.getTime();
+        persistTrialStartTimestamp();
+    }
+
+    /**
+     * Calculates the trial start timestamp.
+     * <p>
+     * If there is no value in the shared preferences, we use the installation timestamp instead.
+     * If both are available, we use the smaller timestamp.
+     */
+    private long calculateTrialStartTimestamp() {
         long packageManagerTimestamp = getPackageManagerTimestamp();
         long preferencesTimestamp = getPreferencesTimestamp();
 
@@ -75,6 +184,9 @@ public class SimpleTrial {
         return Math.min(packageManagerTimestamp, preferencesTimestamp);
     }
 
+    /**
+     * Returns the installation timestamp reported by the package manage.
+     */
     private long getPackageManagerTimestamp() {
         try {
             return context.getPackageManager()
@@ -85,6 +197,9 @@ public class SimpleTrial {
         }
     }
 
+    /**
+     * Returns the timestamp stored in the shared preference file.
+     */
     private long getPreferencesTimestamp() {
         SharedPreferences preferences = context
                 .getSharedPreferences(sharedPreferencesFile, Context.MODE_PRIVATE);
