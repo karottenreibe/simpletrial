@@ -53,10 +53,15 @@ shared preferences file.
 
 The usual procedure would be:
 
-- Create the `SimpleTrial` object
-- Read the trial start date from your additional factor
-- Compare the date obtained from `SimpleTrial` with your factor's date
-- Update the simple trial and your factor to both store the minimum of both dates
+```java
+SimpleTrial trial = new SimpleTrial(context, 14, false);
+Date otherTrialStartDate = obtainOtherFactor();
+if (otherTrialStartDate.after(trial.getTrialStartDate())) {
+    updateYourFactor(trial.getTrialStartDate());
+} else {
+    trial.updateTrialStartDate(otherTrialStartDate);
+}
+```
 
 [1]: http://stackoverflow.com/q/995719/1396068
 [2]: http://stackoverflow.com/a/42321380/1396068
