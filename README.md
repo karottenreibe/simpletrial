@@ -32,7 +32,8 @@ the user reinstalls the application. You have two options:
 To use key-value backup, you must
 add a `BackupAgentHelper` to your project and register a `SharedPreferencesBackupHelper`
 [as described in the Android developer documentation][7] to back up
-the shared preference file used by simplebackup.
+the shared preference file used by simplebackup. simplebackup will take care itself to request a
+backup from the `BackupManager` when necessary.
 
 ## Combining with other factors
 

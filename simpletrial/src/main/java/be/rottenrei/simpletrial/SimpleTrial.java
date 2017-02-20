@@ -80,12 +80,13 @@ public class SimpleTrial {
     private long trialStartTimestamp;
 
     /**
+     * Whether key-value backup is used to persist the trial information across reinstallations.
+     */
+    private boolean usesKeyValueBackup;
+
+    /**
      * Creates a new simple trial, calculates the trial start timestamp, immediately stores it
      * in the given shared preference.
-     * <p>
-     * If you are using the key-value backup mechanism, you should call
-     * {@link #initiateKeyValueBackup()} immediately afterwards to trigger a backup of the shared
-     * preference file.
      * <p>
      * If you are using auto backup, no further action is required.
      * <p>
@@ -98,13 +99,19 @@ public class SimpleTrial {
      * @param preferenceName        the name of the preference under which to cache the start
      *                              timestamp.
      * @param trialDurationInDays   the duration of the trial in days.
+     * @param usesKeyValueBackup    wether key-value backup is used to persist the trial
+     *                              information across reinstallations. Set this to false if you
+     *                              either don't want to use any backup mechanism or if you are
+     *                              using Auto Backup. If this is true, a backup will be
+     *                              requested immediately.
      */
     public SimpleTrial(Context context, String sharedPreferencesFile, String preferenceName,
-            long trialDurationInDays) {
+            long trialDurationInDays, boolean usesKeyValueBackup) {
         this.context = context;
         this.sharedPreferencesFile = sharedPreferencesFile;
         this.preferenceName = preferenceName;
         this.trialDurationInMilliseconds = trialDurationInDays * 24L * 3600 * 1000;
+        this.usesKeyValueBackup = usesKeyValueBackup;
         trialStartTimestamp = calculateTrialStartTimestamp();
         persistTrialStartTimestamp();
     }
@@ -114,26 +121,19 @@ public class SimpleTrial {
      * {@link #DEFAULT_PREFERENCE_NAME}, calculates the trial start timestamp, immediately
      * stores it in the given shared preference.
      * <p>
-     * If you are using the key-value backup mechanism, you should call
-     * {@link #initiateKeyValueBackup()} immediately afterwards to trigger a backup of the shared
-     * preference file.
-     * <p>
      * If you are using auto backup, no further action is required.
      *
      * @param context             the context (application context is enough).
      * @param trialDurationInDays the duration of the trial in days.
+     * @param usesKeyValueBackup    wether key-value backup is used to persist the trial
+     *                              information across reinstallations. Set this to false if you
+     *                              either don't want to use any backup mechanism or if you are
+     *                              using Auto Backup. If this is true, a backup will be
+     *                              requested immediately.
      */
-    public SimpleTrial(Context context, long trialDurationInDays) {
+    public SimpleTrial(Context context, long trialDurationInDays, boolean usesKeyValueBackup) {
         this(context, DEFAULT_SHARED_PREFERENCES_FILE, DEFAULT_PREFERENCE_NAME,
-                trialDurationInDays);
-    }
-
-    /**
-     * Calls {@link BackupManager#dataChanged()}. Should be invoked right after creating this
-     * object if you use key-value backup.
-     */
-    public void initiateKeyValueBackup() {
-        new BackupManager(context).dataChanged();
+                trialDurationInDays, usesKeyValueBackup);
     }
 
     /**
@@ -157,6 +157,10 @@ public class SimpleTrial {
         SharedPreferences preferences = context
                 .getSharedPreferences(sharedPreferencesFile, Context.MODE_PRIVATE);
         preferences.edit().putLong(preferenceName, trialStartTimestamp).apply();
+
+        if (usesKeyValueBackup) {
+            new BackupManager(context).dataChanged();
+        }
     }
 
     /**
