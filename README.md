@@ -24,7 +24,7 @@ The simplest version of this library using Auto Backup looks like this:
 ```java
 // create 14 day trial using Auto Backup
 SimpleTrial trial = new SimpleTrial(context, 14, false);
-if (trial.isTrialPeriodFinished) {
+if (trial.isTrialPeriodFinished()) {
     // ...
 }
 ```
