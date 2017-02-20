@@ -19,6 +19,16 @@ and shared preferences, as they requrie no special permissions.
 Combined with either [Auto Backup or key-value backup][4], the user has to reinstall the app and subsequently clear
 its cache to reset the trial. This is sufficient work to deter the vast majority of users.
 
+The simplest version of this library using Auto Backup looks like this:
+
+```java
+// create 14 day trial using Auto Backup
+SimpleTrial trial = new SimpleTrial(context, 14, false);
+if (trial.isTrialPeriodFinished) {
+    // ...
+}
+```
+
 ## Backup
 
 simpletrial requires that you backup its shared preference file to the cloud so it is restored when
