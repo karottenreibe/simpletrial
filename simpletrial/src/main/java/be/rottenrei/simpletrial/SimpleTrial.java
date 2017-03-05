@@ -139,8 +139,10 @@ public class SimpleTrial {
     /**
      * Configuration for a {@link SimpleTrial}.
      * <p>
-     * If you overwrite nothing, you will get a trial that lasts {@value
-     * #DEFAULT_TRIAL_DURATION_IN_DAYS} days and that uses the {@link PackageManagerTrialFactor}
+     * If you overwrite nothing, you will get a trial that lasts
+     * {@value SimpleTrial#DEFAULT_TRIAL_DURATION_IN_DAYS} days and
+     * that uses the
+     * {@link PackageManagerTrialFactor}
      * and the {@link SharedPreferencesTrialFactor} with its default configuration.
      */
     public static class Config {

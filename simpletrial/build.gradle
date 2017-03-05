@@ -1,5 +1,29 @@
 apply plugin: 'com.android.library'
 
+ext {
+    bintrayRepo = 'simpletrial'
+    bintrayName = 'simpletrial'
+
+    publishedGroupId = 'be.rottenrei'
+    libraryName = 'simpletrial'
+    artifact = 'simpletrial'
+
+    libraryDescription = 'A library for Android to facilitate a trial period in your app'
+
+    siteUrl = 'https://github.com/karottenreibe/simpletrial'
+    gitUrl = 'https://github.com/karottenreibe/simpletrial.git'
+
+    libraryVersion = '1.0'
+
+    developerId = 'karottenreibe'
+    developerName = 'Fabian Streitel'
+    developerEmail = 'maven@rottenrei.be'
+
+    licenseName = 'The Apache Software License, Version 2.0'
+    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    allLicenses = ["Apache-2.0"]
+}
+
 android {
     compileSdkVersion 25
     buildToolsVersion "25.0.2"
@@ -29,3 +53,6 @@ dependencies {
     compile 'com.android.support:appcompat-v7:25.1.0'
     testCompile 'junit:junit:4.12'
 }
+
+apply from: 'install.gradle'
+apply from: 'bintray.gradle'

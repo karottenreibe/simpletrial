@@ -68,8 +68,9 @@ public class SharedPreferencesTrialFactor extends TrialFactor {
 
     /**
      * Configuration for the {@link SharedPreferencesTrialFactor}. If you don't change any of the
-     * defaults, the timestamp will be stored in a shared preference file named {@value
-     * #DEFAULT_SHARED_PREFERENCES_FILE} in a preference named {@value #DEFAULT_PREFERENCE_NAME}
+     * defaults, the timestamp will be stored in a shared preference file named
+     * {@value SharedPreferencesTrialFactor#DEFAULT_SHARED_PREFERENCES_FILE} in a preference named
+     * {@value SharedPreferencesTrialFactor#DEFAULT_PREFERENCE_NAME}
      * and a backup will be triggered when persisting the timestamp.
      */
     public static class Config {
