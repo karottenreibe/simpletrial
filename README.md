@@ -1,8 +1,14 @@
 # simpletrial
 
-Simple Android library to facilitate a trial period.
+Simple Android library to facilitate a trial period in your app.
 
-_License:_ Apache 2
+## Gradle
+
+simpletrial is available via JCenter.
+
+    compile 'be.rottenrei:simpletrial:1.0' 
+
+[ ![JCenter](https://api.bintray.com/packages/karottenreibe/simpletrial/simpletrial/images/download.svg) ](https://bintray.com/karottenreibe/simpletrial/simpletrial/_latestVersion)
 
 ## Problem
 
@@ -58,6 +64,10 @@ if (trial.isTrialPeriodFinished()) {
     // ...
 }}
 ```
+
+## License
+
+Apache 2
 
 [1]: http://stackoverflow.com/q/995719/1396068
 [2]: http://stackoverflow.com/a/42321380/1396068
