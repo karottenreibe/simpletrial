@@ -14,7 +14,7 @@ storing their trial status is hard (c.f. [this StackOverflow question][1]).
 
 There are many different indicators that can be used to facilitate a trial period, but, as outlined in
 [this StackOverflow post][2], the least intrusive for the user are [PackageManager.firstInstallTime][3]
-and shared preferences, as they requrie no special permissions.
+and shared preferences, as they require no special permissions.
 
 Combined with either [Auto Backup or key-value backup][4], the user has to reinstall the app and subsequently clear
 its cache to reset the trial. This is sufficient work to deter the vast majority of users.
