@@ -53,7 +53,7 @@ class:
 
 ```java
 SimpleTrial trial = new SimpleTrial(context, new SimpleTrial.Config().addFactor(
-        new YourCustomFactor()));
+        new FileTrialFactor(new File("/some/path"))));
 if (trial.isTrialPeriodFinished()) {
     // ...
 }}
