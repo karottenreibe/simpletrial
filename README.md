@@ -22,8 +22,8 @@ its cache to reset the trial. This is sufficient work to deter the vast majority
 The simplest version of this library using Auto Backup looks like this:
 
 ```java
-// create 14 day trial using Auto Backup
-SimpleTrial trial = new SimpleTrial(context, 14, false);
+// create 14 day trial using firstInstallTime and backuped shared preferences
+SimpleTrial trial = new SimpleTrial(context, new SimpleTrial.Config());
 if (trial.isTrialPeriodFinished()) {
     // ...
 }
@@ -31,7 +31,7 @@ if (trial.isTrialPeriodFinished()) {
 
 ## Backup
 
-simpletrial requires that you backup its shared preference file to the cloud so it is restored when
+simpletrial works best if you backup its shared preference file to the cloud so it is restored when
 the user reinstalls the application. You have two options:
 
 - Enable [Auto Backup][5]. It will automatically back up all shared preference files. This is
@@ -47,20 +47,16 @@ backup from the `BackupManager` when necessary.
 
 ## Combining with other factors
 
-simpletrial is designed to let you add additional factors like a file stored in the user's external
-storage. You can simply query and update the trial start date stored in the
-shared preferences file.
-
-The usual procedure would be:
+simpletrial is designed to let you add additional factors. Each factor must extend `TrialFactor`
+and any number of factors can be registered in the `Config` object passed to the `SimpleTrial`
+class:
 
 ```java
-SimpleTrial trial = new SimpleTrial(context, 14, false);
-Date otherTrialStartDate = obtainOtherFactor();
-if (otherTrialStartDate.after(trial.getTrialStartDate())) {
-    updateYourFactor(trial.getTrialStartDate());
-} else {
-    trial.updateTrialStartDate(otherTrialStartDate);
-}
+SimpleTrial trial = new SimpleTrial(context, new SimpleTrial.Config().addFactor(
+        new YourCustomFactor()));
+if (trial.isTrialPeriodFinished()) {
+    // ...
+}}
 ```
 
 [1]: http://stackoverflow.com/q/995719/1396068

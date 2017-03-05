@@ -17,12 +17,12 @@
 package be.rottenrei.simpletrial;
 
 
-import android.app.backup.BackupManager;
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Simple implementation of a trial period. The trial starts when the user installs the
@@ -39,20 +39,9 @@ import java.util.Date;
 public class SimpleTrial {
 
     /**
-     * The default shared preference file to cache the trial start timestamp in.
+     * The default duration of a trial period in days.
      */
-    public static final String DEFAULT_SHARED_PREFERENCES_FILE = "simple_trial";
-
-    /**
-     * The default name of the shared preference under which the trial start timestamp will be
-     * cached.
-     */
-    public static final String DEFAULT_PREFERENCE_NAME = "trial_start";
-
-    /**
-     * Timestamp to return when the trial start timestamp cannot be determined.
-     */
-    private static final long NOT_AVAILABLE_TIMESTAMP = -1;
+    private static final int DEFAULT_TRIAL_DURATION_IN_DAYS = 14;
 
     /**
      * The context.
@@ -60,29 +49,19 @@ public class SimpleTrial {
     private final Context context;
 
     /**
-     * The shared preferences file to cache the start timestamp in.
-     */
-    private final String sharedPreferencesFile;
-
-    /**
-     * The name of the preference under which to cache the start timestamp.
-     */
-    private final String preferenceName;
-
-    /**
      * The duration of the trial in milliseconds.
      */
     private final long trialDurationInMilliseconds;
 
     /**
+     * The trial configuration.
+     */
+    private final Config config;
+
+    /**
      * In-memory cache of the trial start timestamp.
      */
     private long trialStartTimestamp;
-
-    /**
-     * Whether key-value backup is used to persist the trial information across reinstallations.
-     */
-    private boolean usesKeyValueBackup;
 
     /**
      * Creates a new simple trial, calculates the trial start timestamp, immediately stores it
@@ -93,47 +72,15 @@ public class SimpleTrial {
      * If you'd like to add additional checks, you can use {@link #getTrialStartDate()} and
      * {@link #updateTrialStartDate(Date)}.
      *
-     * @param context               the context (application context is enough).
-     * @param sharedPreferencesFile the shared preference file in which to cache the trial
-     *                              timestamp.
-     * @param preferenceName        the name of the preference under which to cache the start
-     *                              timestamp.
-     * @param trialDurationInDays   the duration of the trial in days.
-     * @param usesKeyValueBackup    wether key-value backup is used to persist the trial
-     *                              information across reinstallations. Set this to false if you
-     *                              either don't want to use any backup mechanism or if you are
-     *                              using Auto Backup. If this is true, a backup will be
-     *                              requested immediately.
+     * @param context the context (application context is enough).
+     * @param config  the configuration for the trial.
      */
-    public SimpleTrial(Context context, String sharedPreferencesFile, String preferenceName,
-            long trialDurationInDays, boolean usesKeyValueBackup) {
+    public SimpleTrial(Context context, Config config) {
         this.context = context;
-        this.sharedPreferencesFile = sharedPreferencesFile;
-        this.preferenceName = preferenceName;
-        this.trialDurationInMilliseconds = trialDurationInDays * 24L * 3600 * 1000;
-        this.usesKeyValueBackup = usesKeyValueBackup;
+        this.trialDurationInMilliseconds = config.trialDurationInDays * 24L * 3600 * 1000;
+        this.config = config;
         trialStartTimestamp = calculateTrialStartTimestamp();
         persistTrialStartTimestamp();
-    }
-
-    /**
-     * Creates a new simple trial using the {@link #DEFAULT_SHARED_PREFERENCES_FILE} and
-     * {@link #DEFAULT_PREFERENCE_NAME}, calculates the trial start timestamp, immediately
-     * stores it in the given shared preference.
-     * <p>
-     * If you are using auto backup, no further action is required.
-     *
-     * @param context             the context (application context is enough).
-     * @param trialDurationInDays the duration of the trial in days.
-     * @param usesKeyValueBackup    wether key-value backup is used to persist the trial
-     *                              information across reinstallations. Set this to false if you
-     *                              either don't want to use any backup mechanism or if you are
-     *                              using Auto Backup. If this is true, a backup will be
-     *                              requested immediately.
-     */
-    public SimpleTrial(Context context, long trialDurationInDays, boolean usesKeyValueBackup) {
-        this(context, DEFAULT_SHARED_PREFERENCES_FILE, DEFAULT_PREFERENCE_NAME,
-                trialDurationInDays, usesKeyValueBackup);
     }
 
     /**
@@ -154,18 +101,14 @@ public class SimpleTrial {
      * Stores the trial start timestamp in the shared preference.
      */
     private void persistTrialStartTimestamp() {
-        SharedPreferences preferences = context
-                .getSharedPreferences(sharedPreferencesFile, Context.MODE_PRIVATE);
-        preferences.edit().putLong(preferenceName, trialStartTimestamp).apply();
-
-        if (usesKeyValueBackup) {
-            new BackupManager(context).dataChanged();
+        for (TrialFactor factor : config.factors) {
+            factor.persistTimestamp(trialStartTimestamp, context);
         }
     }
 
     /**
-     * Allows you to manually override the trial start date. The date will be persisted to the
-     * shared preferences.
+     * Allows you to manually override the trial start date. The date will be persisted to all
+     * factors that support persistence.
      */
     public void updateTrialStartDate(Date trialStartDate) {
         trialStartTimestamp = trialStartDate.getTime();
@@ -173,41 +116,76 @@ public class SimpleTrial {
     }
 
     /**
-     * Calculates the trial start timestamp.
-     * <p>
-     * If there is no value in the shared preferences, we use the installation timestamp instead.
-     * If both are available, we use the smaller timestamp.
+     * Calculates the trial start timestamp by querying all factors and returning the minimum
+     * timestamp. If no factor reports a valid timestamp, falls back to the current time.
      */
     private long calculateTrialStartTimestamp() {
-        long packageManagerTimestamp = getPackageManagerTimestamp();
-        long preferencesTimestamp = getPreferencesTimestamp();
-
-        if (preferencesTimestamp == NOT_AVAILABLE_TIMESTAMP) {
-            return packageManagerTimestamp;
+        long timestamp = Long.MAX_VALUE;
+        for (TrialFactor factor : config.factors) {
+            long factorTimestamp = factor.readTimestamp(context);
+            if (factorTimestamp < timestamp) {
+                timestamp = factorTimestamp;
+            }
         }
-        return Math.min(packageManagerTimestamp, preferencesTimestamp);
+
+        long currentTimestamp = new Date().getTime();
+        if (timestamp > currentTimestamp) {
+            // fall back to the current time
+            return currentTimestamp;
+        }
+        return timestamp;
     }
 
     /**
-     * Returns the installation timestamp reported by the package manage.
+     * Configuration for a {@link SimpleTrial}.
+     * <p>
+     * If you overwrite nothing, you will get a trial that lasts {@value
+     * #DEFAULT_TRIAL_DURATION_IN_DAYS} days and that uses the {@link PackageManagerTrialFactor}
+     * and the {@link SharedPreferencesTrialFactor} with its default configuration.
      */
-    private long getPackageManagerTimestamp() {
-        try {
-            return context.getPackageManager()
-                    .getPackageInfo(context.getPackageName(), 0).firstInstallTime;
-        } catch (PackageManager.NameNotFoundException e) {
-            throw new RuntimeException("Your own package " + context.getPackageName() +
-                    " is not availbable. This should never happen", e);
-        }
-    }
+    public static class Config {
 
-    /**
-     * Returns the timestamp stored in the shared preference file.
-     */
-    private long getPreferencesTimestamp() {
-        SharedPreferences preferences = context
-                .getSharedPreferences(sharedPreferencesFile, Context.MODE_PRIVATE);
-        return preferences.getLong(preferenceName, NOT_AVAILABLE_TIMESTAMP);
+        /**
+         * The factors to use.
+         */
+        private List<TrialFactor> factors = new ArrayList<>();
+
+        /**
+         * @see Config
+         */
+        public Config() {
+            factors.add(new PackageManagerTrialFactor());
+            factors.add(
+                    new SharedPreferencesTrialFactor(new SharedPreferencesTrialFactor.Config()));
+        }
+
+        /**
+         * The length of the trial period in days.
+         */
+        private int trialDurationInDays = DEFAULT_TRIAL_DURATION_IN_DAYS;
+
+        /**
+         * Changes the factors to use in the trial.
+         */
+        public void factors(TrialFactor... factors) {
+            this.factors.clear();
+            addFactors(factors);
+        }
+
+        /**
+         * Adds an additional factor to use in the trial.
+         */
+        public void addFactors(TrialFactor... factors) {
+            this.factors.addAll(Arrays.asList(factors));
+        }
+
+        /**
+         * Changes the duration of the trial period.
+         */
+        public Config trialDurationInDays(int trialDurationInDays) {
+            this.trialDurationInDays = trialDurationInDays;
+            return this;
+        }
     }
 
 }
