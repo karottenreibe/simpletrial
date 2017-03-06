@@ -6,7 +6,7 @@ Simple Android library to facilitate a trial period in your app.
 
 simpletrial is available via JCenter.
 
-    compile 'be.rottenrei:simpletrial:1.0' 
+    compile 'be.rottenrei:simpletrial:1.0.1' 
 
 [ ![JCenter](https://api.bintray.com/packages/karottenreibe/simpletrial/simpletrial/images/download.svg) ](https://bintray.com/karottenreibe/simpletrial/simpletrial/_latestVersion)
 
