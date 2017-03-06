@@ -169,16 +169,18 @@ public class SimpleTrial {
         /**
          * Changes the factors to use in the trial.
          */
-        public void factors(TrialFactor... factors) {
+        public Config factors(TrialFactor... factors) {
             this.factors.clear();
             addFactors(factors);
+            return this;
         }
 
         /**
          * Adds an additional factor to use in the trial.
          */
-        public void addFactors(TrialFactor... factors) {
+        public Config addFactors(TrialFactor... factors) {
             this.factors.addAll(Arrays.asList(factors));
+            return this;
         }
 
         /**
